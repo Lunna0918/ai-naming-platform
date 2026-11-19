@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>文档驱动 AI 起名平台</title>
+    <style>
+      :root {
+        --bg: #faf5ee;
+        --card: #ffffff;
+        --text: #2b2118;
+        --muted: #8a7a68;
+        --primary: #d97706;
+        --primary-soft: #fef3e2;
+        --border: #eadfce;
+        --line: #f0e7d8;
+        --radius: 14px;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft Yahei", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+      }
+      header {
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        padding: 18px 24px;
+      }
+      header h1 { font-size: 18px; }
+      header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px 16px;
+        display: grid;
+        gap: 20px;
+        grid-template-columns: 1fr 1fr;
+      }
+      @media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+      }
+      .card h3 { font-size: 14px; margin-bottom: 12px; }
+      .field { margin-bottom: 14px; }
+      label { display: block; font-size: 13px; margin-bottom: 6px; color: var(--text); }
+      input, select, textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 9px 12px;
+        font-size: 14px;
+        background: #fff;
+        color: var(--text);
+        outline: none;
+      }
+      textarea { resize: vertical; }
+      input:focus, select:focus, textarea:focus { border-color: var(--primary); }
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+      .chip {
+        border: 1px solid var(--border);
+        background: #fff;
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-size: 13px;
+        cursor: pointer;
+        color: var(--muted);
+      }
+      .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .btn-row { display: flex; gap: 12px; margin-top: 8px; }
+      button.primary {
+        flex: 1;
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 12px;
+        font-size: 15px;
+        cursor: pointer;
+      }
+      button.primary:disabled { opacity: 0.6; cursor: not-allowed; }
+      button.ghost {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px 16px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .upload {
+        border: 1px dashed var(--border);
+        border-radius: 10px;
+        padding: 12px;
+        text-align: center;
+        font-size: 13px;
+        color: var(--muted);
+        cursor: pointer;
+        margin-bottom: 10px;
+      }
+      .upload:hover { border-color: var(--primary); color: var(--primary); }
+      .file-name { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+      .result-empty {
+        border: 1px dashed var(--border);
+        border-radius: var(--radius);
+        padding: 48px 20px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .result-body { white-space: pre-wrap; font-size: 15px; }
+      .result-body .cursor { display: inline-block; width: 8px; animation: blink 1s step-end infinite; }
+      @keyframes blink { 50% { opacity: 0; } }
+      .history-item {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+        font-size: 13px;
+      }
+      .history-item .meta { color: var(--muted); font-size: 12px; margin-top: 4px; }
+      .tag { display: inline-block; background: var(--primary-soft); color: var(--primary); border-radius: 6px; padding: 1px 8px; font-size: 12px; margin-left: 6px; }
+      .toast {
+        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+        background: var(--text); color: #fff; padding: 10px 18px; border-radius: 10px;
+        font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none;
+      }
+      .toast.show { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>文档驱动 AI 起名平台</h1>
+      <p>上传业务资料与规则文档，选择模型，流式生成名字方案</p>
+    </header>
+
+    <div class="wrap">
+      <!-- 左侧配置 -->
+      <section>
+        <div class="card" style="margin-bottom:20px">
+          <h3>模型选择</h3>
+          <div class="field">
+            <label for="model">大模型（modelConfigMap 统一配置）</label>
+            <select id="model">
+              <option value="doubao">豆包（火山方舟）</option>
+              <option value="deepseek">DeepSeek</option>
+              <option value="qwen">通义千问</option>
+              <option value="kimi">Kimi（月之暗面）</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <h3>命名场景</h3>
+          <div class="chips" id="scene-chips"></div>
+          <div class="field" style="margin-top:12px">
+            <label for="requirement">补充需求描述</label>
+            <textarea id="requirement" rows="3" placeholder="例如：男孩、国风、简约，希望寓意明朗向上…"></textarea>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <h3>业务资料文档</h3>
+          <div class="upload" id="biz-upload">点击上传文档（txt / docx / pdf）</div>
+          <input type="file" id="biz-file" accept=".txt,.md,.docx,.pdf" hidden />
+          <div class="file-name" id="biz-name"></div>
+          <textarea id="biz-doc" rows="4" placeholder="也可以直接粘贴业务资料内容…"></textarea>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <h3>规则配置文档</h3>
+          <div class="upload" id="rule-upload">点击上传规则文档（txt / docx / pdf）</div>
+          <input type="file" id="rule-file" accept=".txt,.md,.docx,.pdf" hidden />
+          <div class="file-name" id="rule-name"></div>
+          <textarea id="rule-doc" rows="4" placeholder="风格、字数、关键词、禁用字、寓意方向…"></textarea>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <h3>规则细化</h3>
+          <div class="grid2">
+            <div class="field">
+              <label for="style">风格倾向</label>
+              <input id="style" placeholder="国风 / 简约 / 科技感" />
+            </div>
+            <div class="field">
+              <label for="wordCount">字数要求</label>
+              <input id="wordCount" placeholder="2-3 个汉字" />
+            </div>
+            <div class="field">
+              <label for="keywords">偏好关键词</label>
+              <input id="keywords" placeholder="自然、光明、成长" />
+            </div>
+            <div class="field">
+              <label for="banned">禁用字 / 词</label>
+              <input id="banned" placeholder="避免生僻字、贬义谐音" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="meaning">寓意方向</label>
+            <textarea id="meaning" rows="2"></textarea>
+          </div>
+          <div class="field">
+            <label for="count">生成数量</label>
+            <input id="count" type="number" min="1" max="20" value="6" />
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="primary" id="generate">开始起名</button>
+          <button class="ghost" id="reset">重置</button>
+        </div>
+      </section>
+
+      <!-- 右侧结果 -->
+      <section>
+        <div class="card" style="margin-bottom:20px">
+          <h3>候选名字（流式输出）</h3>
+          <div id="result" class="result-empty">填写场景与资料后，点击「开始起名」</div>
+        </div>
+
+        <div class="card">
+          <h3>生成历史（Supabase）</h3>
+          <div id="history"><div class="result-empty" style="padding:24px">暂无历史记录</div></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+      const SCENES = ['品牌名', '店铺名', '产品名', '人名', '宠物名', '工作室名', '账号名', '项目名', '自定义'];
+      let activeScene = SCENES[0];
+      let streaming = false;
+
+      const $ = (id) => document.getElementById(id);
+
+      function toast(msg) {
+        const t = $('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 1800);
+      }
+
+      // 场景 chips
+      const chipsBox = $('scene-chips');
+      SCENES.forEach((s) => {
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'chip' + (s === activeScene ? ' active' : '');
+        el.textContent = s;
+        el.onclick = () => {
+          activeScene = s;
+          [...chipsBox.children].forEach((c) => c.classList.remove('active'));
+          el.classList.add('active');
+        };
+        chipsBox.appendChild(el);
+      });
+
+      // 文档上传解析（浏览器端）
+      function bindUpload(uploadId, fileId, nameId, docId) {
+        $(uploadId).onclick = () => $(fileId).click();
+        $(fileId).onchange = async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          $(nameId).textContent = file.name;
+          try {
+            const text = await parseFile(file);
+            $(docId).value = text;
+            toast('文档已解析');
+          } catch (err) {
+            toast('解析失败：' + String(err));
+          }
+        };
+      }
+
+      async function parseFile(file) {
+        const name = file.name.toLowerCase();
+        if (name.endsWith('.txt') || name.endsWith('.md')) return file.text();
+        if (name.endsWith('.docx')) {
+          const mammoth = await import('https://cdn.jsdelivr.net/npm/mammoth@1.13.0/mammoth.browser.min.js');
+          const buf = await file.arrayBuffer();
+          const res = await mammoth.extractRawText({ arrayBuffer: buf });
+          return res.value;
+        }
+        if (name.endsWith('.pdf')) {
+          const pdfjs = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.2.67/build/pdf.min.mjs');
+          pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.2.67/build/pdf.worker.min.mjs';
+          const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+          const parts = [];
+          for (let i = 1; i <= doc.numPages; i++) {
+            const page = await doc.getPage(i);
+            const c = await page.getTextContent();
+            parts.push(c.items.map((it) => ('str' in it ? it.str : '')).join(' '));
+          }
+          return parts.join('\n');
+        }
+        return file.text();
+      }
+
+      bindUpload('biz-upload', 'biz-file', 'biz-name', 'biz-doc');
+      bindUpload('rule-upload', 'rule-file', 'rule-name', 'rule-doc');
+
+      function collectRules() {
+        return {
+          style: $('style').value.trim(),
+          wordCount: $('wordCount').value.trim(),
+          keywords: $('keywords').value.trim(),
+          banned: $('banned').value.trim(),
+          meaning: $('meaning').value.trim(),
+        };
+      }
+
+      async function loadHistory() {
+        try {
+          const res = await fetch('/api/history');
+          const data = await res.json();
+          const list = data.history || [];
+          const box = $('history');
+          if (!list.length) {
+            box.innerHTML = '<div class="result-empty" style="padding:24px">暂无历史记录</div>';
+            return;
+          }
+          box.innerHTML = '';
+          list.forEach((item) => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML =
+              '<div>' + escapeHtml(item.name_result).slice(0, 120) + '</div>' +
+              '<div class="meta">需求：' + escapeHtml(item.user_requirement) +
+              '<span class="tag">' + escapeHtml(item.model_name) + '</span></div>';
+            box.appendChild(div);
+          });
+        } catch {
+          /* 历史加载失败静默 */
+        }
+      }
+
+      function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, (c) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[c]));
+      }
+
+      async function generate() {
+        if (streaming) return;
+        const payload = {
+          model: $('model').value,
+          scene: activeScene,
+          requirement: $('requirement').value.trim(),
+          businessDoc: $('biz-doc').value.trim(),
+          ruleDoc: $('rule-doc').value.trim(),
+          rules: collectRules(),
+          count: Number($('count').value) || 6,
+        };
+
+        streaming = true;
+        $('generate').disabled = true;
+        const box = $('result');
+        box.className = 'result-body';
+        box.textContent = '';
+        let collected = '';
+
+        try {
+          const res = await fetch('/api/name', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: '请求失败' }));
+            throw new Error(err.error || ('接口错误 ' + res.status));
+          }
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const blocks = buffer.split('\n\n');
+            buffer = blocks.pop() || '';
+            for (const block of blocks) {
+              const lines = block.split('\n');
+              let event = 'message';
+              let dataLine = '';
+              for (const line of lines) {
+                if (line.startsWith('event:')) event = line.slice(6).trim();
+                if (line.startsWith('data:')) dataLine = line.slice(5).trim();
+              }
+              if (!dataLine) continue;
+              const data = JSON.parse(dataLine);
+              if (event === 'delta') {
+                collected += data.text;
+                box.textContent = collected;
+              } else if (event === 'error') {
+                throw new Error(data.message);
+              } else if (event === 'done') {
+                loadHistory();
+              }
+            }
+          }
+          if (!collected) box.textContent = '未返回内容，请调整需求后重试。';
+        } catch (err) {
+          box.textContent = '生成失败：' + String(err);
+          box.className = 'result-empty';
+        } finally {
+          streaming = false;
+          $('generate').disabled = false;
+        }
+      }
+
+      function resetAll() {
+        ['requirement', 'biz-doc', 'rule-doc', 'style', 'wordCount', 'keywords', 'banned', 'meaning'].forEach((id) => $(id).value = '');
+        $('biz-name').textContent = '';
+        $('rule-name').textContent = '';
+        $('result').className = 'result-empty';
+        $('result').textContent = '填写场景与资料后，点击「开始起名」';
+      }
+
+      $('generate').onclick = generate;
+      $('reset').onclick = resetAll;
+      loadHistory();
+    </script>
+  </body>
+</html>
